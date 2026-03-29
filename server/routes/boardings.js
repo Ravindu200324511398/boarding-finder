@@ -79,7 +79,7 @@ router.post('/', protect, upload.single('image'), async (req, res, next) => {
       lat: lat ? Number(lat) : null,
       lng: lng ? Number(lng) : null,
       roomType: roomType || 'Single',
-      amenities: amenities ? amenities.split(',').map((a) => a.trim()) : [],
+      amenities: Array.isArray(amenities) ? amenities : amenities ? amenities.split(',').map(a => a.trim()) : [],
       contact: contact || '',
       owner: req.user.id,
     };
@@ -108,7 +108,7 @@ router.put('/:id', protect, upload.single('image'), async (req, res, next) => {
     if (lat) boarding.lat = Number(lat);
     if (lng) boarding.lng = Number(lng);
     if (roomType) boarding.roomType = roomType;
-    if (amenities) boarding.amenities = amenities.split(',').map((a) => a.trim());
+    if (amenities) boarding.amenities = Array.isArray(amenities) ? amenities : amenities.split(',').map(a => a.trim());
     if (contact) boarding.contact = contact;
     if (req.file) boarding.image = req.file.filename;
     await boarding.save();
