@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6 },
     isAdmin: { type: Boolean, default: false },
+    avatar: { type: String, default: null },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Boarding' }],
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },

@@ -4,26 +4,44 @@ const User = require('../models/User');
 const Boarding = require('../models/Boarding');
 const { adminProtect } = require('../middleware/admin');
 
+const AVATAR_BASE = 'http://localhost:5001/uploads/avatars/';
+
+// Helper: attach full avatar URL to a user object
+const withAvatarUrl = (u) => {
+  const obj = typeof u.toObject === 'function' ? u.toObject() : { ...u };
+  return {
+    ...obj,
+    avatarUrl: obj.avatar ? `${AVATAR_BASE}${obj.avatar}` : null,
+  };
+};
+
 // ── GET /api/admin/stats ─────────────────────
 router.get('/stats', adminProtect, async (req, res, next) => {
   try {
-    const totalUsers = await User.countDocuments({ isAdmin: false });
+    const totalUsers    = await User.countDocuments({ isAdmin: false });
     const totalBoardings = await Boarding.countDocuments();
-    const totalAdmins = await User.countDocuments({ isAdmin: true });
+    const totalAdmins   = await User.countDocuments({ isAdmin: true });
+
     const recentBoardings = await Boarding.find()
       .sort({ createdAt: -1 })
       .limit(5)
-      .populate('owner', 'name email');
-    const recentUsers = await User.find({ isAdmin: false })
+      .populate('owner', 'name email avatar');
+
+    const recentUsersRaw = await User.find({ isAdmin: false })
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('-password');
+      .select('-password -resetPasswordToken -resetPasswordExpires');
+
+    const recentUsers = recentUsersRaw.map(withAvatarUrl);
+
     const boardingsByType = await Boarding.aggregate([
-      { $group: { _id: '$roomType', count: { $sum: 1 } } }
+      { $group: { _id: '$roomType', count: { $sum: 1 } } },
     ]);
+
     const avgPrice = await Boarding.aggregate([
-      { $group: { _id: null, avg: { $avg: '$price' } } }
+      { $group: { _id: null, avg: { $avg: '$price' } } },
     ]);
+
     res.json({
       success: true,
       stats: {
@@ -43,15 +61,16 @@ router.get('/stats', adminProtect, async (req, res, next) => {
 router.get('/users', adminProtect, async (req, res, next) => {
   try {
     const users = await User.find()
-      .select('-password')
+      .select('-password -resetPasswordToken -resetPasswordExpires')
       .sort({ createdAt: -1 });
-    // Add boarding count per user
+
     const usersWithCount = await Promise.all(
       users.map(async (u) => {
         const boardingCount = await Boarding.countDocuments({ owner: u._id });
-        return { ...u.toObject(), boardingCount };
+        return { ...withAvatarUrl(u), boardingCount };
       })
     );
+
     res.json({ success: true, users: usersWithCount });
   } catch (err) { next(err); }
 });
@@ -59,9 +78,13 @@ router.get('/users', adminProtect, async (req, res, next) => {
 // ── GET /api/admin/users/:id ─────────────────
 router.get('/users/:id', adminProtect, async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const userRaw = await User.findById(req.params.id)
+      .select('-password -resetPasswordToken -resetPasswordExpires');
+    if (!userRaw) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const user = withAvatarUrl(userRaw);
     const boardings = await Boarding.find({ owner: req.params.id }).sort({ createdAt: -1 });
+
     res.json({ success: true, user, boardings });
   } catch (err) { next(err); }
 });
@@ -85,7 +108,11 @@ router.patch('/users/:id/toggle-admin', adminProtect, async (req, res, next) => 
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     user.isAdmin = !user.isAdmin;
     await user.save();
-    res.json({ success: true, message: `User is now ${user.isAdmin ? 'an admin' : 'a regular user'}`, isAdmin: user.isAdmin });
+    res.json({
+      success: true,
+      message: `User is now ${user.isAdmin ? 'an admin' : 'a regular user'}`,
+      isAdmin: user.isAdmin,
+    });
   } catch (err) { next(err); }
 });
 
@@ -93,9 +120,21 @@ router.patch('/users/:id/toggle-admin', adminProtect, async (req, res, next) => 
 router.get('/boardings', adminProtect, async (req, res, next) => {
   try {
     const boardings = await Boarding.find()
-      .populate('owner', 'name email')
+      .populate('owner', 'name email avatar')   // ← avatar included
       .sort({ createdAt: -1 });
-    res.json({ success: true, boardings });
+
+    // Attach avatarUrl on the embedded owner object
+    const boardingsWithOwnerAvatar = boardings.map((b) => {
+      const obj = b.toObject();
+      if (obj.owner && obj.owner.avatar) {
+        obj.owner.avatarUrl = `${AVATAR_BASE}${obj.owner.avatar}`;
+      } else if (obj.owner) {
+        obj.owner.avatarUrl = null;
+      }
+      return obj;
+    });
+
+    res.json({ success: true, boardings: boardingsWithOwnerAvatar });
   } catch (err) { next(err); }
 });
 
