@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6 },
     isAdmin: { type: Boolean, default: false },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Boarding' }],
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
   },
   { timestamps: true }
 );
@@ -19,8 +21,8 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-userSchema.methods.comparePassword = async function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
+userSchema.methods.comparePassword = async function (entered) {
+  return bcrypt.compare(entered, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);
