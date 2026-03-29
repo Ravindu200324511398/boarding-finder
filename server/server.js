@@ -27,6 +27,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/boardings', boardingRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/ratings', require('./routes/ratings'));
 
 // ── Health Check ────────────────────────────
 app.get('/api/health', (req, res) => {

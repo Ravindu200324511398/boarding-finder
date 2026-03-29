@@ -1,40 +1,17 @@
-// ============================================
-// User Model
-// ============================================
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    password: {
-      type: String,
-      required: [true, 'Password is required'],
-      minlength: 6,
-    },
-    // Array of boarding IDs the user has favorited
-    favorites: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Boarding',
-      },
-    ],
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true, minlength: 6 },
+    isAdmin: { type: Boolean, default: false },
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Boarding' }],
   },
   { timestamps: true }
 );
 
-// Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
@@ -42,7 +19,6 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Method to compare entered password with hashed password
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
