@@ -9,6 +9,7 @@ const boardingSchema = new mongoose.Schema(
     lat: { type: Number },
     lng: { type: Number },
     image: { type: String },
+    images: [{ type: String }],
     roomType: { type: String, default: 'Single', enum: ['Single','Double','Triple','Annex','Other'] },
     amenities: [{ type: String }],
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

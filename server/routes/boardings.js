@@ -11,7 +11,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `boarding_${Date.now()}${ext}`);
+    const unique = `${Date.now()}_${Math.round(Math.random()*1e6)}`;
+    cb(null, `boarding_${unique}${ext}`);
   },
 });
 
@@ -65,7 +66,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/', protect, upload.single('image'), async (req, res, next) => {
+router.post('/', protect, upload.array('images', 8), async (req, res, next) => {
   try {
     const { title, description, price, location, lat, lng, roomType, amenities, contact } = req.body;
     if (!title || !description || !price || !location) {
@@ -83,7 +84,14 @@ router.post('/', protect, upload.single('image'), async (req, res, next) => {
       contact: contact || '',
       owner: req.user.id,
     };
-    if (req.file) boardingData.image = req.file.filename;
+    console.log('Uploaded files:', req.files);
+    if (req.files && req.files.length > 0) {
+      boardingData.image = req.files[0].filename;
+      boardingData.images = req.files.map(f => f.filename);
+    } else if (req.file) {
+      boardingData.image = req.file.filename;
+      boardingData.images = [req.file.filename];
+    }
     const boarding = await Boarding.create(boardingData);
     res.status(201).json({ success: true, message: 'Boarding added successfully', boarding });
   } catch (err) {
@@ -91,7 +99,7 @@ router.post('/', protect, upload.single('image'), async (req, res, next) => {
   }
 });
 
-router.put('/:id', protect, upload.single('image'), async (req, res, next) => {
+router.put('/:id', protect, upload.array('images', 8), async (req, res, next) => {
   try {
     const boarding = await Boarding.findById(req.params.id);
     if (!boarding) {
@@ -110,7 +118,14 @@ router.put('/:id', protect, upload.single('image'), async (req, res, next) => {
     if (roomType) boarding.roomType = roomType;
     if (amenities) boarding.amenities = Array.isArray(amenities) ? amenities : amenities.split(',').map(a => a.trim());
     if (contact) boarding.contact = contact;
-    if (req.file) boarding.image = req.file.filename;
+    console.log('Uploaded files PUT:', req.files);
+    if (req.files && req.files.length > 0) {
+      boarding.image = req.files[0].filename;
+      boarding.images = req.files.map(f => f.filename);
+    } else if (req.file) {
+      boarding.image = req.file.filename;
+      boarding.images = [req.file.filename];
+    }
     await boarding.save();
     res.json({ success: true, message: 'Boarding updated', boarding });
   } catch (err) {
