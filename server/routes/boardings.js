@@ -149,4 +149,18 @@ router.delete('/:id', protect, async (req, res, next) => {
   }
 });
 
+
+// Toggle availability
+router.patch('/:id/availability', protect, async (req, res, next) => {
+  try {
+    const boarding = await Boarding.findById(req.params.id);
+    if (!boarding) return res.status(404).json({ success: false, message: 'Not found' });
+    if (boarding.owner.toString() !== req.user.id)
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    boarding.isAvailable = !boarding.isAvailable;
+    await boarding.save();
+    res.json({ success: true, isAvailable: boarding.isAvailable });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

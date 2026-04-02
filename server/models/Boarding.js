@@ -14,6 +14,7 @@ const boardingSchema = new mongoose.Schema(
     amenities: [{ type: String }],
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     contact: { type: String },
+    isAvailable: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
