@@ -7,10 +7,9 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6 },
     isAdmin: { type: Boolean, default: false },
+    isBanned: { type: Boolean, default: false },
     avatar: { type: String, default: null },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Boarding' }],
-    resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date },
   },
   { timestamps: true }
 );
@@ -22,8 +21,8 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-userSchema.methods.comparePassword = async function (entered) {
-  return bcrypt.compare(entered, this.password);
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);
