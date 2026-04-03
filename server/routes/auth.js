@@ -30,7 +30,7 @@ const avatarStorage = multer.diskStorage({
 });
 const avatarUpload = multer({
   storage: avatarStorage,
-  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
+  limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (/image\/(jpeg|jpg|png|webp|gif)/.test(file.mimetype)) cb(null, true);
     else cb(new Error('Only image files are allowed'));
@@ -61,12 +61,22 @@ router.post('/login', async (req, res, next) => {
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ success: false, message: 'Email and password required' });
+
     const user = await User.findOne({ email });
     if (!user)
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch)
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
+
+    // ── Ban check ─────────────────────────────
+    if (user.isBanned)
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been banned. Please contact support.',
+      });
+
     const token = generateToken(user);
     res.json({
       success: true, token,
@@ -162,19 +172,15 @@ router.put('/profile', protect, async (req, res, next) => {
 });
 
 // ── POST /api/auth/avatar ─────────────────────
-// Upload or replace profile photo
 router.post('/avatar', protect, avatarUpload.single('avatar'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'No image file provided' });
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-    // Delete old avatar file if exists
     if (user.avatar) {
       const oldPath = path.join(__dirname, '../uploads/avatars', user.avatar);
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
-
     user.avatar = req.file.filename;
     await user.save();
     const token = generateToken(user);
@@ -183,7 +189,6 @@ router.post('/avatar', protect, avatarUpload.single('avatar'), async (req, res, 
 });
 
 // ── DELETE /api/auth/avatar ───────────────────
-// Remove profile photo
 router.delete('/avatar', protect, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);

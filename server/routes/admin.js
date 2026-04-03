@@ -63,6 +63,22 @@ router.patch('/users/:id/toggle-admin', adminProtect, async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
+// ── BAN / UNBAN USER ──────────────────────────────────────
+router.patch('/users/:id/toggle-ban', adminProtect, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.isAdmin) return res.status(400).json({ success: false, message: 'Cannot ban an admin account' });
+    user.isBanned = !user.isBanned;
+    await user.save();
+    res.json({
+      success: true,
+      message: `User has been ${user.isBanned ? 'banned' : 'unbanned'} successfully`,
+      isBanned: user.isBanned,
+    });
+  } catch (err) { next(err); }
+});
+
 router.get('/boardings', adminProtect, async (req, res, next) => {
   try {
     const boardings = await Boarding.find().populate('owner', 'name email').sort({ createdAt: -1 });
