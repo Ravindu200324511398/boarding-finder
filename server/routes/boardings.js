@@ -6,25 +6,17 @@ const Boarding = require('../models/Boarding');
 const { protect } = require('../middleware/auth');
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads'));
-  },
+  destination: (req, file, cb) => { cb(null, path.join(__dirname, '../uploads')); },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `boarding_${Date.now()}${ext}`);
+    cb(null, `boarding_${Date.now()}_${Math.round(Math.random()*1e6)}${ext}`);
   },
 });
-
 const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-  if (allowed.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only JPEG, PNG, WEBP images are allowed'), false);
-  }
+  const allowed = ['image/jpeg','image/png','image/webp','image/jpg'];
+  allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('Only JPEG, PNG, WEBP images are allowed'), false);
 };
-
-const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } });
 
 router.get('/', async (req, res, next) => {
   try {
@@ -46,60 +38,45 @@ router.get('/', async (req, res, next) => {
     }
     const boardings = await Boarding.find(filter)
       .populate('owner', 'name email')
-      .sort({ createdAt: -1 });
+      .sort({ isPromoted: -1, createdAt: -1 });
     res.json({ success: true, count: boardings.length, boardings });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 router.get('/:id', async (req, res, next) => {
   try {
     const boarding = await Boarding.findById(req.params.id).populate('owner', 'name email');
-    if (!boarding) {
-      return res.status(404).json({ success: false, message: 'Boarding not found' });
-    }
+    if (!boarding) return res.status(404).json({ success: false, message: 'Boarding not found' });
     res.json({ success: true, boarding });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-router.post('/', protect, upload.single('image'), async (req, res, next) => {
+router.post('/', protect, upload.array('images', 8), async (req, res, next) => {
   try {
+    if (req.user.isBanned) return res.status(403).json({ success: false, message: 'Your account has been banned.' });
     const { title, description, price, location, lat, lng, roomType, amenities, contact } = req.body;
-    if (!title || !description || !price || !location) {
+    if (!title || !description || !price || !location)
       return res.status(400).json({ success: false, message: 'Title, description, price, and location are required' });
-    }
     const boardingData = {
-      title,
-      description,
-      price: Number(price),
-      location,
-      lat: lat ? Number(lat) : null,
-      lng: lng ? Number(lng) : null,
+      title, description, price: Number(price), location,
+      lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null,
       roomType: roomType || 'Single',
-      amenities: amenities ? amenities.split(',').map((a) => a.trim()) : [],
-      contact: contact || '',
-      owner: req.user.id,
+      amenities: Array.isArray(amenities) ? amenities : amenities ? amenities.split(',').map(a => a.trim()) : [],
+      contact: contact || '', owner: req.user.id,
     };
-    if (req.file) boardingData.image = req.file.filename;
+    if (req.files?.length > 0) { boardingData.image = req.files[0].filename; boardingData.images = req.files.map(f => f.filename); }
+    else if (req.file) { boardingData.image = req.file.filename; boardingData.images = [req.file.filename]; }
     const boarding = await Boarding.create(boardingData);
     res.status(201).json({ success: true, message: 'Boarding added successfully', boarding });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-router.put('/:id', protect, upload.single('image'), async (req, res, next) => {
+router.put('/:id', protect, upload.array('images', 8), async (req, res, next) => {
   try {
+    if (req.user.isBanned) return res.status(403).json({ success: false, message: 'Your account has been banned.' });
     const boarding = await Boarding.findById(req.params.id);
-    if (!boarding) {
-      return res.status(404).json({ success: false, message: 'Boarding not found' });
-    }
-    if (boarding.owner.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Not authorized to edit this boarding' });
-    }
+    if (!boarding) return res.status(404).json({ success: false, message: 'Boarding not found' });
+    if (boarding.owner.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
     const { title, description, price, location, lat, lng, roomType, amenities, contact } = req.body;
     if (title) boarding.title = title;
     if (description) boarding.description = description;
@@ -108,30 +85,34 @@ router.put('/:id', protect, upload.single('image'), async (req, res, next) => {
     if (lat) boarding.lat = Number(lat);
     if (lng) boarding.lng = Number(lng);
     if (roomType) boarding.roomType = roomType;
-    if (amenities) boarding.amenities = amenities.split(',').map((a) => a.trim());
+    if (amenities) boarding.amenities = Array.isArray(amenities) ? amenities : amenities.split(',').map(a => a.trim());
     if (contact) boarding.contact = contact;
-    if (req.file) boarding.image = req.file.filename;
+    if (req.files?.length > 0) { boarding.image = req.files[0].filename; boarding.images = req.files.map(f => f.filename); }
+    else if (req.file) { boarding.image = req.file.filename; boarding.images = [req.file.filename]; }
     await boarding.save();
     res.json({ success: true, message: 'Boarding updated', boarding });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 router.delete('/:id', protect, async (req, res, next) => {
   try {
     const boarding = await Boarding.findById(req.params.id);
-    if (!boarding) {
-      return res.status(404).json({ success: false, message: 'Boarding not found' });
-    }
-    if (boarding.owner.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this boarding' });
-    }
+    if (!boarding) return res.status(404).json({ success: false, message: 'Boarding not found' });
+    if (boarding.owner.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
     await boarding.deleteOne();
     res.json({ success: true, message: 'Boarding deleted successfully' });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
+});
+
+router.patch('/:id/availability', protect, async (req, res, next) => {
+  try {
+    const boarding = await Boarding.findById(req.params.id);
+    if (!boarding) return res.status(404).json({ success: false, message: 'Not found' });
+    if (boarding.owner.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
+    boarding.isAvailable = !boarding.isAvailable;
+    await boarding.save();
+    res.json({ success: true, isAvailable: boarding.isAvailable });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

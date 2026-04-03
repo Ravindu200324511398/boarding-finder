@@ -24,6 +24,12 @@ router.get('/:boardingId', async (req, res, next) => {
 // Add or update a rating (protected)
 router.post('/:boardingId', protect, async (req, res, next) => {
   try {
+    // Check if user is the owner of this boarding
+    const Boarding = require('../models/Boarding');
+    const boarding = await Boarding.findById(req.params.boardingId);
+    if (boarding && boarding.owner.toString() === req.user.id) {
+      return res.status(403).json({ success: false, message: 'You cannot review your own listing' });
+    }
     const { stars, comment } = req.body;
     if (!stars || stars < 1 || stars > 5) {
       return res.status(400).json({ success: false, message: 'Stars must be between 1 and 5' });
