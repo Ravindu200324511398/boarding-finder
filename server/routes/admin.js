@@ -63,21 +63,9 @@ router.patch('/users/:id/toggle-admin', adminProtect, async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
-// ── Ban / Unban user ──
-router.patch('/users/:id/toggle-ban', adminProtect, async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    if (user.isAdmin) return res.status(400).json({ success: false, message: 'Cannot ban an admin account' });
-    user.isBanned = !user.isBanned;
-    await user.save();
-    res.json({ success: true, message: `User has been ${user.isBanned ? 'banned' : 'unbanned'}`, isBanned: user.isBanned });
-  } catch (err) { next(err); }
-});
-
 router.get('/boardings', adminProtect, async (req, res, next) => {
   try {
-    const boardings = await Boarding.find().populate('owner', 'name email').sort({ isPromoted: -1, createdAt: -1 });
+    const boardings = await Boarding.find().populate('owner', 'name email').sort({ createdAt: -1 });
     res.json({ success: true, boardings });
   } catch (err) { next(err); }
 });
@@ -88,17 +76,6 @@ router.delete('/boardings/:id', adminProtect, async (req, res, next) => {
     if (!boarding) return res.status(404).json({ success: false, message: 'Boarding not found' });
     await boarding.deleteOne();
     res.json({ success: true, message: 'Boarding deleted' });
-  } catch (err) { next(err); }
-});
-
-// ── Promote / Unpromote listing ──
-router.patch('/boardings/:id/toggle-promote', adminProtect, async (req, res, next) => {
-  try {
-    const boarding = await Boarding.findById(req.params.id);
-    if (!boarding) return res.status(404).json({ success: false, message: 'Boarding not found' });
-    boarding.isPromoted = !boarding.isPromoted;
-    await boarding.save();
-    res.json({ success: true, message: `Listing is now ${boarding.isPromoted ? 'promoted' : 'unpromoted'}`, isPromoted: boarding.isPromoted });
   } catch (err) { next(err); }
 });
 
