@@ -1,236 +1,268 @@
-#🏠 Boarding Finder — Backend (Server)
+# 🏠 Boarding Finder — Backend API
 
-## Tech Stack
-- **Node.js** + **Express.js**
-- **MongoDB** + **Mongoose**
-- **JWT** — Authentication
-- **Multer** — Image / avatar file uploads
-- **bcryptjs** — Password hashing
-- **dotenv** — Environment variables
+> RESTful API server for the Boarding Finder platform — a web application to help students find boarding houses near universities across Sri Lanka.
+
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js)](https://nodejs.org)
+[![Express](https://img.shields.io/badge/Express-4.18-lightgrey?logo=express)](https://expressjs.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.x-green?logo=mongodb)](https://mongodb.com)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 ---
 
-## 📁 Folder Structure
+## 📋 Table of Contents
+
+- [About](#about)
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [API Endpoints](#api-endpoints)
+- [Seeding the Database](#seeding-the-database)
+- [Author](#author)
+
+---
+
+## About
+
+The Boarding Finder backend is a Node.js/Express REST API that powers the full boarding house listing platform. It handles user authentication, boarding listings, favorites, inquiries, ratings, admin management, and AI-powered listing generation using Claude (Anthropic).
+
+---
+
+## Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| Node.js | Runtime environment |
+| Express.js | Web framework |
+| MongoDB | Database |
+| Mongoose | ODM for MongoDB |
+| JSON Web Tokens (JWT) | Authentication |
+| bcryptjs | Password hashing |
+| Multer | Image/file uploads |
+| @anthropic-ai/sdk | AI listing generation via Claude |
+| dotenv | Environment variable management |
+
+---
+
+## Features
+
+- 🔐 **JWT Authentication** — Register, login, logout with 7-day tokens
+- 🚫 **Ban System** — Admins can ban/unban users; banned users are blocked from login and all protected routes instantly
+- 🏠 **Boarding Listings** — Full CRUD with image uploads (up to 8 photos), location, amenities, room type
+- ❤️ **Favorites** — Users can save and manage favourite listings
+- 📩 **Inquiries** — Students can send visit requests to listing owners
+- ⭐ **Ratings & Reviews** — Users can rate and review boarding places
+- 🗺️ **Map Coordinates** — Lat/lng support for map-based browsing
+- 🤖 **AI Listing Writer** — Generate and improve listing descriptions using Claude AI
+- 👮 **Admin Panel API** — Manage users, listings, view stats, promote/demote admins
+- 📸 **Avatar Uploads** — Profile photo upload and management
+- 🔑 **Password Reset** — Secure token-based password reset flow
+
+---
+
+## Project Structure
 
 ```
 server/
-├── models/
-│   ├── User.js          # User schema (name, email, password, avatar, favorites, resetToken)
-│   ├── Boarding.js      # Boarding listing schema
-│   └── Rating.js        # Rating/review schema
-├── routes/
-│   ├── auth.js          # Register, login, profile, forgot/reset password, avatar
-│   ├── boardings.js     # CRUD for boarding listings
-│   ├── favorites.js     # Add/remove/get favorites
-│   ├── admin.js         # Admin-only routes
-│   └── ratings.js       # Ratings routes
 ├── middleware/
-│   └── auth.js          # JWT protect middleware
-├── uploads/
-│   ├── (boarding images stored here)
-│   └── avatars/         # Profile photo uploads stored here
-├── seed.js              # Default seed data (run once to populate DB)
-├── server.js            # Entry point
-├── .env                 # Environment variables (create this manually)
+│   ├── auth.js           # JWT protect middleware (ban check included)
+│   └── admin.js          # Admin-only route guard
+├── models/
+│   ├── User.js           # User schema (name, email, password, isAdmin, isBanned, avatar)
+│   ├── Boarding.js       # Boarding listing schema
+│   ├── Inquiry.js        # Inquiry schema
+│   └── Rating.js         # Rating/review schema
+├── routes/
+│   ├── auth.js           # Auth routes (register, login, profile, avatar, password reset)
+│   ├── boardings.js      # Boarding CRUD routes
+│   ├── favorites.js      # Favorites routes
+│   ├── inquiries.js      # Inquiry routes
+│   ├── ratings.js        # Rating routes
+│   ├── admin.js          # Admin routes (users, ban, promote, stats)
+│   └── ai.js             # AI listing generation routes
+├── uploads/              # Uploaded images (auto-created)
+│   └── avatars/          # Profile photos
+├── server.js             # App entry point
+├── seed.js               # Database seeder
+├── .env                  # Environment variables (not committed)
 └── package.json
 ```
 
 ---
 
-## ⚙️ Setup & Installation
+## Getting Started
 
-### 1. Install dependencies
+### Prerequisites
+
+- Node.js 18+
+- MongoDB (local or Atlas)
+
+### Installation
+
 ```bash
-cd server
+# 1. Clone the repository
+git clone https://github.com/Ravindu200324511398/boarding-finder.git
+cd boarding-finder/server
+
+# 2. Install dependencies
 npm install
-```
 
-### 2. Create `.env` file
-Create a file called `.env` inside the `server/` folder:
-```env
-PORT=5001
-MONGO_URI=mongodb://localhost:27017/boarding_finder
-JWT_SECRET=boarding_finder_super_secret_key_2024
-```
+# 3. Create your .env file
+cp .env.example .env
+# Then fill in your values (see Environment Variables section)
 
-### 3. Make sure MongoDB is running
-```bash
-# macOS (Homebrew)
-brew services start mongodb-community
-
-# Ubuntu/Linux
-sudo systemctl start mongod
-
-# Windows — start MongoDB service from Services panel
-```
-
-### 4. Seed default data (first time only)
-This creates default admin and user accounts plus sample boarding listings.
-```bash
-cd server
+# 4. Seed the database with sample data (optional)
 node seed.js
-```
 
-### 5. Start the server
-```bash
-# Development (with auto-restart)
+# 5. Start the development server
 npm run dev
 
-# Production
+# Or for production
 npm start
 ```
 
-Server runs at: **http://localhost:5001**
+The server will run at: `http://localhost:5001`
 
 ---
 
-## 🔑 Default Login Credentials
+## Environment Variables
 
-> These are created when you run `node seed.js`
+Create a `.env` file in the `server/` directory:
 
-### 👑 Admin Account
-| Field    | Value                  |
-|----------|------------------------|
-| Email    | `admin@boarding.com`   |
-| Password | `admin123`             |
-| Role     | Admin                  |
-
-### 👤 User Account 1
-| Field    | Value                  |
-|----------|------------------------|
-| Email    | `john@example.com`     |
-| Password | `user1234`             |
-| Name     | John Perera            |
-| Role     | User                   |
-
-### 👤 User Account 2
-| Field    | Value                  |
-|----------|------------------------|
-| Email    | `sarah@example.com`    |
-| Password | `user1234`             |
-| Name     | Sarah Fernando         |
-| Role     | User                   |
-
----
-
-## 📡 API Endpoints
-
-### Auth
-| Method | Endpoint                          | Auth Required | Description                  |
-|--------|-----------------------------------|---------------|------------------------------|
-| POST   | `/api/auth/register`              | No            | Register new user            |
-| POST   | `/api/auth/login`                 | No            | Login, returns JWT token     |
-| GET    | `/api/auth/me`                    | Yes           | Get current user info        |
-| GET    | `/api/auth/profile`               | Yes           | Get profile + listings       |
-| PUT    | `/api/auth/profile`               | Yes           | Update name / email / password |
-| POST   | `/api/auth/avatar`                | Yes           | Upload profile photo         |
-| DELETE | `/api/auth/avatar`                | Yes           | Remove profile photo         |
-| POST   | `/api/auth/forgot-password`       | No            | Generate password reset link |
-| POST   | `/api/auth/reset-password/:token` | No            | Reset password with token    |
-| DELETE | `/api/auth/profile/boarding/:id`  | Yes           | Delete own listing           |
-
-### Boardings
-| Method | Endpoint                  | Auth Required | Description            |
-|--------|---------------------------|---------------|------------------------|
-| GET    | `/api/boardings`          | No            | Get all listings       |
-| GET    | `/api/boardings/:id`      | No            | Get single listing     |
-| POST   | `/api/boardings`          | Yes           | Create new listing     |
-| PUT    | `/api/boardings/:id`      | Yes           | Update listing         |
-| DELETE | `/api/boardings/:id`      | Yes           | Delete listing         |
-
-### Favorites
-| Method | Endpoint                      | Auth Required | Description              |
-|--------|-------------------------------|---------------|--------------------------|
-| GET    | `/api/favorites`              | Yes           | Get user's favorites     |
-| POST   | `/api/favorites/:boardingId`  | Yes           | Add to favorites         |
-| DELETE | `/api/favorites/:boardingId`  | Yes           | Remove from favorites    |
-
-### Admin
-| Method | Endpoint                    | Admin Only | Description           |
-|--------|-----------------------------|------------|-----------------------|
-| GET    | `/api/admin/users`          | Yes        | List all users        |
-| GET    | `/api/admin/users/:id`      | Yes        | Get user detail       |
-| DELETE | `/api/admin/users/:id`      | Yes        | Delete user           |
-| GET    | `/api/admin/boardings`      | Yes        | List all boardings    |
-| DELETE | `/api/admin/boardings/:id`  | Yes        | Delete any boarding   |
-| GET    | `/api/admin/stats`          | Yes        | Dashboard stats       |
-
----
-
-## 🗂️ File Upload Details
-
-- **Boarding images** — saved to `server/uploads/`
-- **Avatar photos** — saved to `server/uploads/avatars/`
-- **Max avatar size** — 3 MB
-- **Allowed formats** — JPG, PNG, WEBP, GIF
-- **Served at** — `http://localhost:5001/uploads/` and `http://localhost:5001/uploads/avatars/`
-
----
-
-## 🔒 How Authentication Works
-
-1. User logs in → server returns a **JWT token**
-2. Frontend stores the token in `localStorage`
-3. All protected requests include the header:
-   ```
-   Authorization: Bearer <token>
-   ```
-4. The `protect` middleware verifies the token on every protected route
-
----
-
-## 🔐 Forgot Password Flow (Dev Mode)
-
-Since no email server is configured, the reset link is **returned directly in the API response** instead of being sent by email. This is for development/demo purposes only.
-
-1. POST `/api/auth/forgot-password` with `{ email }` → get back `resetUrl`
-2. Open the `resetUrl` in the browser
-3. POST `/api/auth/reset-password/:token` with `{ password }` → password is reset
-
-In production, replace the `resetUrl` response with `nodemailer` or any email service (SendGrid, Resend, Mailgun).
-
----
-
-## 📦 Key Dependencies
-
-```json
-"dependencies": {
-  "bcryptjs": "^2.4.3",
-  "cors": "^2.8.5",
-  "dotenv": "^16.0.0",
-  "express": "^4.18.0",
-  "jsonwebtoken": "^9.0.0",
-  "mongoose": "^7.0.0",
-  "multer": "^1.4.5"
-}
+```env
+PORT=5001
+MONGO_URI=mongodb://localhost:27017/boarding_finder
+JWT_SECRET=your_super_secret_jwt_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-Install with:
+| Variable | Description |
+|---|---|
+| `PORT` | Port to run the server on (default: 5001) |
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Secret key for signing JWT tokens |
+| `ANTHROPIC_API_KEY` | API key from [Anthropic Console](https://console.anthropic.com) for AI features |
+
+---
+
+## API Endpoints
+
+### Auth — `/api/auth`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/register` | ❌ | Register a new user |
+| POST | `/login` | ❌ | Login (returns JWT token) |
+| GET | `/me` | ✅ | Get current user info |
+| GET | `/profile` | ✅ | Get profile + listings |
+| PUT | `/profile` | ✅ | Update name, email, password |
+| POST | `/avatar` | ✅ | Upload profile photo |
+| DELETE | `/avatar` | ✅ | Remove profile photo |
+| POST | `/forgot-password` | ❌ | Request password reset token |
+| POST | `/reset-password/:token` | ❌ | Reset password with token |
+
+### Boardings — `/api/boardings`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | ❌ | Get all listings (with filters) |
+| POST | `/` | ✅ | Create new listing |
+| GET | `/:id` | ❌ | Get single listing |
+| PUT | `/:id` | ✅ | Update listing (owner only) |
+| DELETE | `/:id` | ✅ | Delete listing (owner only) |
+| PATCH | `/:id/availability` | ✅ | Toggle available/occupied |
+
+### Favorites — `/api/favorites`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | ✅ | Get user's favourites |
+| POST | `/:boardingId` | ✅ | Add to favourites |
+| DELETE | `/:boardingId` | ✅ | Remove from favourites |
+
+### Inquiries — `/api/inquiries`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/:boardingId` | ❌ | Send inquiry to owner |
+| GET | `/` | ✅ | Get inquiries for your listings |
+| GET | `/mine` | ✅ | Get inquiries you sent |
+
+### Ratings — `/api/ratings`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/:boardingId` | ❌ | Get ratings for a listing |
+| POST | `/:boardingId` | ✅ | Submit rating and review |
+| DELETE | `/:boardingId` | ✅ | Delete your rating |
+
+### Admin — `/api/admin` (Admin only)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/stats` | Dashboard statistics |
+| GET | `/users` | List all users |
+| GET | `/users/:id` | Get user detail + listings |
+| DELETE | `/users/:id` | Delete user and their listings |
+| PATCH | `/users/:id/toggle-admin` | Promote/demote admin |
+| PATCH | `/users/:id/toggle-ban` | Ban/unban user |
+| GET | `/boardings` | List all boardings |
+| DELETE | `/boardings/:id` | Delete any boarding |
+
+### AI — `/api/ai`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/generate-listing` | ✅ | Generate title + description using Claude AI |
+| POST | `/improve-listing` | ✅ | Improve existing description using Claude AI |
+
+---
+
+## Seeding the Database
+
+The seed script creates sample users and boarding listings across Sri Lanka:
+
 ```bash
-npm install bcryptjs cors dotenv express jsonwebtoken mongoose multer
-npm install --save-dev nodemon
+node seed.js
 ```
+
+After seeding, use these credentials:
+
+```
+👤 ADMIN
+   Email:    admin@boardingfinder.com
+   Password: admin123
+
+👤 USERS
+   kasun@example.com    / password123
+   nimasha@example.com  / password123
+   ravindu@example.com  / password123
+```
+
+> ⚠️ The seed script deletes all existing data before inserting new records.
 
 ---
 
-## 🚀 npm Scripts
+## Ban System
 
-```json
-"scripts": {
-  "start": "node server.js",
-  "dev": "nodemon server.js",
-  "seed": "node seed.js"
-}
-```
+When a user is banned by an admin:
+
+- ❌ They **cannot log in** — login returns a `403` error with a clear message
+- ❌ All **protected API routes** return `403 Forbidden` immediately, even with a valid token
+- ✅ **Unbanning** restores full access instantly on next login
+
+The middleware fetches the user fresh from the database on every request, so banning takes effect immediately without waiting for the token to expire.
 
 ---
 
-## ❓ Common Issues
+## Author
 
-| Issue | Fix |
-|-------|-----|
-| `MongoServerError: connection refused` | Start MongoDB service first |
-| `JWT malformed` | Check that `.env` has `JWT_SECRET` set |
-| `Cannot POST /api/auth/login` | Make sure server is running on port 5001 |
-| Avatar upload fails | Check `uploads/avatars/` folder exists (seed.js creates it) |
-| CORS error | Frontend must run on `http://localhost:3000` or update CORS origin in `server.js` |
+**Ravindu Saranga**
+- GitHub: [@Ravindu200324511398](https://github.com/Ravindu200324511398)
+
+---
+
+## License
+
+This project is licensed under the MIT License.
