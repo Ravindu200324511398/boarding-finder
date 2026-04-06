@@ -1,9 +1,4 @@
-// server/routes/ai.js
-// ─────────────────────────────────────────────────────────
-// AI Feature 5 — Listing Writer
-// POST /api/ai/generate-listing
-// Takes basic listing details, returns AI-generated title + description
-// ─────────────────────────────────────────────────────────
+
 
 const express = require('express');
 const router  = express.Router();
@@ -12,9 +7,6 @@ const { protect } = require('../middleware/auth');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ── POST /api/ai/generate-listing ────────────────────────
-// Body: { location, price, roomType, amenities[], gender, description }
-// Returns: { title, description }
 router.post('/generate-listing', protect, async (req, res, next) => {
   try {
     const { location, price, roomType, amenities = [], gender, description } = req.body;

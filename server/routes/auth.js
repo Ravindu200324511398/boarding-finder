@@ -13,7 +13,7 @@ const generateToken = (user) =>
   jwt.sign(
     { id: user._id, email: user.email, name: user.name, isAdmin: user.isAdmin, avatar: user.avatar },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '2h' }
   );
 
 // ── Avatar upload setup ──────────────────────

@@ -3,8 +3,7 @@ const router = express.Router();
 const Rating = require('../models/Rating');
 const { protect } = require('../middleware/auth');
 
-// ── GET /api/ratings/:boardingId ─────────────
-// Get all ratings for a boarding
+// ── GET /api/ratings/:boardingId ───────────────
 router.get('/:boardingId', async (req, res, next) => {
   try {
     const ratings = await Rating.find({ boarding: req.params.boardingId })
